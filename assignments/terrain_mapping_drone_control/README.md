@@ -48,6 +48,14 @@ The `takeoff_node.py` script includes:
 
 This modular setup allows for later extension to include dynamic navigation and object-based positioning logic.
 
+## Challenges Faced
+
+-  **Low Simulation Performance:** The Gazebo simulation ran at a real-time factor of ~8.49 due to hardware limitations, making debugging and iteration slower.
+-  **OFFBOARD Mode Timing:** Ensuring that setpoints were streamed before attempting mode switching was critical to avoid MAVROS command rejection.
+-  **MAVROS Communication Delays:** Minor timing issues between command publishing and service responses occasionally caused the drone to reject arming or mode commands.
+-  **Complex Launch Dependencies:** Integrating all launch and PX4 model paths correctly across ROS2, Gazebo, and PX4 required careful file setup and scripting.
+
+
 ---
 
 ## Results and Observations
