@@ -1,129 +1,170 @@
-# Assignment 3: Rocky Times Challenge - Search, Map, & Analyze
+# Rocky Times Challenge - Search, Map, & Analyze
+## Report
 
-This ROS2 package implements an autonomous drone system for geological feature detection, mapping, and analysis using an RGBD camera and PX4 SITL simulation.
+**Name:** Sathvik Merugu  
+**ASU ID:** 1235373752 
 
-## Challenge Overview
+---
 
-Students will develop a controller for a PX4-powered drone to efficiently search, map, and analyze cylindrical rock formations in an unknown environment. The drone must identify two rock formations (10m and 7m tall cylinders), estimate their dimensions, and successfully land on top of the taller cylinder.
+## Introduction
 
-### Mission Objectives
-1. Search and locate all cylindrical rock formations
-2. Map and analyze rock dimensions:
-   - Estimate height and diameter of each cylinder
-   - Determine positions in the world frame
-3. Land safely on top of the taller cylinder
-4. Complete mission while logging time and energy performance. 
+This project implements an autonomous drone system in ROS2 designed to explore and analyze cylindrical geological structures in a terrain like simulated environment. Leveraging PX4 SITL, MAVROS, and simulated RGB-D sensing, the system demonstrates autonomous takeoff, position control, and groundwork for object-based landing. This work represents a core step toward full autonomy in space robotics missions requiring intelligent terrain interaction and energy-efficient control.
 
-![Screenshot from 2025-03-04 20-22-35](https://github.com/user-attachments/assets/3548b6da-613a-401d-bf38-e9e3ac4a2a2b)
+---
 
-### Evaluation Criteria (100 points)
+## System Overview
 
-The assignment will be evaluated based on:
-- Total time taken to complete the mission
-- Total energy units consumed during operation
-- Accuracy of cylinder dimension estimates
-- Landing precision on the taller cylinder
-- Performance across multiple trials (10 known + 5 unknown scenes)
+### Software and Simulation Stack
+- **Operating System:** Ubuntu 24.04  
+- **Middleware:** ROS2 Jazzy  
+- **Simulator:** PX4 SITL with `gz_x500_depth_mono` drone  
+- **Sensor Model:** RGB-D (depth + color camera)  
+- **Perception:** RTAB-Map SLAM (to be integrated)  
+- **Control Layer:** MAVROS for OFFBOARD control and arming  
 
-### Key Requirements
+The simulation executed with a **real-time factor of ~8.49**, reflecting limited compute resources. Despite this, the drone successfully performed all required commands, including transitioning to OFFBOARD mode, arming, and maintaining stable hover. This confirms correct system integration and controller performance under constrained conditions.
 
-- Autonomous takeoff and search strategy implementation
-- Real-time cylinder detection and dimension estimation
-- Energy-conscious path planning
-- Safe and precise landing on the target cylinder
-- Robust performance across different scenarios
+---
 
-## Prerequisites
+## Methodology
 
-- ROS2 Humble
-- PX4 SITL Simulator (Tested with PX4-Autopilot main branch 9ac03f03eb)
-- RTAB-Map ROS2 package
-- OpenCV
-- Python 3.8+
+### Autonomous Takeoff Flow
+- A continuous stream of 100 position setpoints is first published to meet PX4’s OFFBOARD requirement  
+- The drone is then switched to `OFFBOARD` mode via MAVROS  
+- Once in OFFBOARD, the drone is armed using a service call  
+- The drone autonomously ascends to 2.5 meters and maintains position
 
-## Repository Setup
+The setpoint remains constant (x=0, y=0, z=2.5), allowing for a smooth vertical lift. The node uses a 10 Hz timer to publish commands and monitor state changes.
 
-### If you already have a fork of the course repository:
+---
 
-```bash
-# Navigate to your local copy of the repository
-cd ~/RAS-SES-598-Space-Robotics-and-AI
+## Implementation Details
 
-# Add the original repository as upstream (if not already done)
-git remote add upstream https://github.com/DREAMS-lab/RAS-SES-598-Space-Robotics-and-AI.git
+The `takeoff_node.py` script includes:
+- State monitoring (`/mavros/state`)
+- Setpoint publication (`/mavros/setpoint_position/local`)
+- Mode switching and arming services (`/mavros/set_mode`, `/mavros/cmd/arming`)
+- Asynchronous callbacks for safe transition handling
 
-# Fetch the latest changes from upstream
-git fetch upstream
+This modular setup allows for later extension to include dynamic navigation and object-based positioning logic.
 
-# Checkout your main branch
-git checkout main
+---
 
-# Merge upstream changes
-git merge upstream/main
+## Results and Observations
 
-# Push the updates to your fork
-git push origin main
-```
+- Successful transition to OFFBOARD mode  
+- Autonomous arming and takeoff  
+- Stable hover at 2.5 meters  
+- Verified behavior through simulation and visual confirmation  
 
-### If you don't have a fork yet:
 
-1. Fork the course repository:
-   - Visit: https://github.com/DREAMS-lab/RAS-SES-598-Space-Robotics-and-AI
-   - Click "Fork" in the top-right corner
-   - Select your GitHub account as the destination
+*Note:* The full landing on the cylinder was **partially developed** but not completed. However, the takeoff and hover stages were successfully validated and demonstrated in the provided video.
 
-2. Clone your fork:
-```bash
-cd ~/
-git clone https://github.com/YOUR_USERNAME/RAS-SES-598-Space-Robotics-and-AI.git
-```
 
-### Create Symlink to ROS2 Workspace
 
-```bash
-# Create symlink in your ROS2 workspace
-cd ~/ros2_ws/src
-ln -s ~/RAS-SES-598-Space-Robotics-and-AI/assignments/terrain_mapping_drone_control .
-```
+## Demonstration Video
 
-### Copy PX4 Model Files
 
-Copy the custom PX4 model files to the PX4-Autopilot folder
 
-```bash
-# Navigate to the package
-cd ~/ros2_ws/src/terrain_mapping_drone_control
 
-# Make the setup script executable
-chmod +x scripts/deploy_px4_model.sh
+https://github.com/user-attachments/assets/d3261b74-8c0d-4c39-9628-03bbce5cee72
 
-# Run the setup script to copy model files
-./scripts/deploy_px4_model.sh -p /path/to/PX4-Autopilot
-```
 
-## Building and Running
 
-```bash
-# Build the package
-cd ~/ros2_ws
-colcon build --packages-select terrain_mapping_drone_control --symlink-install
 
-# Source the workspace
-source install/setup.bash
+---
 
-# Launch the simulation with visualization with your PX4-Autopilot path
-ros2 launch terrain_mapping_drone_control cylinder_landing.launch.py
+## Conclusion
 
-# OR you can change the default path in the launch file
-        DeclareLaunchArgument(
-            'px4_autopilot_path',
-            default_value=os.environ.get('HOME', '/home/' + os.environ.get('USER', 'user')) + '/PX4-Autopilot',
-            description='Path to PX4-Autopilot directory'),
-```
-## Extra credit -- 3D reconstruction (50 points)
-Use RTAB-Map or a SLAM ecosystem of your choice to map both rocks, and export the world as a mesh file, and upload to your repo. Use git large file system (LFS) if needed. 
+Despite limited real-time simulation speed, the system successfully demonstrates autonomous drone control including arming, OFFBOARD mode switching, and stable hovering. While the final cylinder landing module was not fully completed, the foundation for object-aware navigation has been established. The current implementation confirms reliable low-level control and prepares the system for full terrain-based landing in future extensions.
 
-## License
+## takeoff_node.py (Full Code)
 
-This assignment is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0). 
-For more details: https://creativecommons.org/licenses/by-nc-sa/4.0/ 
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from mavros_msgs.msg import State
+from mavros_msgs.srv import CommandBool, SetMode
+from geometry_msgs.msg import PoseStamped
+
+class TakeoffNode(Node):
+    def __init__(self):
+        super().__init__('takeoff_node')
+        self.current_state = State()
+        self.connected = False
+
+        self.setpoint = PoseStamped()
+        self.setpoint.pose.position.x = 0.0
+        self.setpoint.pose.position.y = 0.0
+        self.setpoint.pose.position.z = 2.5  # Takeoff height
+
+        self.state_sub = self.create_subscription(State, '/mavros/state', self.state_callback, 10)
+        self.setpoint_pub = self.create_publisher(PoseStamped, '/mavros/setpoint_position/local', 10)
+
+        self.arm_client = self.create_client(CommandBool, '/mavros/cmd/arming')
+        self.mode_client = self.create_client(SetMode, '/mavros/set_mode')
+
+        self.setpoint_count = 0
+        self.mode_sent = False
+        self.armed_sent = False
+
+        self.timer = self.create_timer(0.1, self.timer_callback)
+
+    def state_callback(self, msg):
+        self.current_state = msg
+        self.connected = msg.connected
+
+    def timer_callback(self):
+        if not self.connected:
+            self.get_logger().info("Waiting for FCU connection...")
+            return
+
+        self.setpoint_pub.publish(self.setpoint)
+
+        if self.setpoint_count < 100:
+            self.setpoint_count += 1
+            return
+
+        if not self.mode_sent and self.current_state.mode != 'OFFBOARD':
+            mode_request = SetMode.Request()
+            mode_request.custom_mode = 'OFFBOARD'
+            future = self.mode_client.call_async(mode_request)
+            future.add_done_callback(self.mode_response_callback)
+            self.mode_sent = True
+
+        if not self.armed_sent and self.current_state.mode == 'OFFBOARD' and not self.current_state.armed:
+            arm_request = CommandBool.Request()
+            arm_request.value = True
+            future = self.arm_client.call_async(arm_request)
+            future.add_done_callback(self.arm_response_callback)
+            self.armed_sent = True
+
+    def mode_response_callback(self, future):
+        result = future.result()
+        if result and result.mode_sent:
+            self.get_logger().info("OFFBOARD mode activated.")
+        else:
+            self.get_logger().warn("OFFBOARD mode activation failed.")
+
+    def arm_response_callback(self, future):
+        result = future.result()
+        if result and result.success:
+            self.get_logger().info("Drone armed successfully.")
+        else:
+            self.get_logger().warn("Drone arming failed.")
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = TakeoffNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+
+---
+
